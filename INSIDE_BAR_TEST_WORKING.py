@@ -6,6 +6,19 @@ import concurrent.futures
 import threading
 from typing import List
 
+
+
+
+
+
+import pandas as pd
+import numpy as np
+import glob
+import os
+import concurrent.futures
+import threading
+from typing import List
+
 # Assume calculate_ema and calculate_atr are defined elsewhere
 # Example placeholder functions (replace with your actual implementations):
 def calculate_ema(df, period):
@@ -420,7 +433,6 @@ class InsideBarBreakoutStrategy:
                          trade.sl = new_sl
                          if self.debug_mode:
                               print(f"DEBUG: Trailing Stop: Moved SL up to {trade.sl:.2f} using ATR for {trade.symbol} at {current_time}.")
-                 # Fix indentation for the SHORT direction trailing stop
                 elif trade.direction == 'SHORT':
                     new_sl = current_bar['Close'] + atr_stop_level
                     # Only trail down, and only if the new SL is below the current SL (and below initial SL/BE if applicable)
@@ -429,7 +441,6 @@ class InsideBarBreakoutStrategy:
                          if self.debug_mode:
                               print(f"DEBUG: Trailing Stop: Moved SL down to {trade.sl:.2f} using ATR for {trade.symbol} at {current_time}.")
 
-        # Corrected indentation for the return None
         return None # Trade is still open
 
 
@@ -809,7 +820,6 @@ class InsideBarBreakoutStrategy:
                           trade.sl = new_sl
                           if self.debug_mode:
                                print(f"DEBUG: Trailing Stop: Moved SL up to {trade.sl:.2f} using ATR for {trade.symbol} at {current_time}.")
-                 # Fix indentation for the SHORT direction trailing stop
                  elif trade.direction == 'SHORT':
                      new_sl = current_bar['Close'] + atr_stop_level
                      # Only trail down, and only if the new SL is below the current SL (which might be BE)
@@ -844,27 +854,49 @@ class InsideBarBreakoutStrategy:
         self.open_trade_per_symbol = {} # Clear open trades after closing
 
 
-    def generate_detailed_report(self):
-        """Generates a detailed list of all closed trades."""
-        print("\n" + "="*50)
-        print("              DETAILED TRADE REPORT")
-        print("="*50)
+    def calculate_drawdown(self):
+        """Calculates the maximum drawdown."""
         if not self.trades:
-            print("No trades were executed during the backtest.")
-            return
+            return 0.0
+
+        # Sort trades by close time to calculate cumulative PnL correctly
+        sorted_trades = sorted(self.trades, key=lambda t: t.close_time if t.close_time else pd.to_datetime('9999-12-31'))
+
+        cumulative_pnl = 0.0
+        peak_pnl = 0.0
+        max_drawdown = 0.0
+
+        for trade in sorted_trades:
+            cumulative_pnl += trade.pnl
+            peak_pnl = max(peak_pnl, cumulative_pnl)
+            drawdown = peak_pnl - cumulative_pnl
+            max_drawdown = max(max_drawdown, drawdown)
+
+        return max_drawdown
+
+
+    def generate_detailed_report(self) -> str:
+        """Generates a detailed list of all closed trades and returns as a string."""
+        report_output = ""
+        report_output += "\n" + "="*50 + "\n"
+        report_output += "              DETAILED TRADE REPORT\n"
+        report_output += "="*50 + "\n"
+        if not self.trades:
+            report_output += "No trades were executed during the backtest.\n"
+            return report_output
 
         # Define column headers
         header = ["Symbol", "Direction", "Entry Time", "Entry Price", "Exit Time", "Exit Price", "Size", "Initial Risk (Points)", "PnL (Currency)", "Status"]
 
         # Define format string for the header (all strings)
-        header_format_string = "{:<10} {:<10} {:<20} {:<12} {:<20} {:<12} {:<8} {:<20} {:<15} {:<10}"
+        header_format_string = "{:<10} {:<10} {:<20} {:<12} {:<20} {:<12} {:<8} {:<20} {:<15} {:<10}\n"
 
         # Define format string for the trade data (mix of strings, floats, ints)
-        trade_format_string = "{:<10} {:<10} {:<20} {:<12.2f} {:<20} {:<12.2f} {:<8} {:<20.2f} {:<15.2f} {:<10}"
+        trade_format_string = "{:<10} {:<10} {:<20} {:<12.2f} {:<20} {:<12.2f} {:<8} {:<20.2f} {:<15.2f} {:<10}\n"
 
 
-        print(header_format_string.format(*header)) # Use the header format string for the header
-        print("-" * 150) # Separator line
+        report_output += header_format_string.format(*header) # Use the header format string for the header
+        report_output += "-" * 150 + "\n" # Separator line
 
         for trade in self.trades:
             # Ensure close_price is not None before formatting as float
@@ -873,7 +905,7 @@ class InsideBarBreakoutStrategy:
             initial_risk_formatted = abs(trade.entry_price - trade.initial_risk) if trade.initial_risk is not None else 0.0
 
 
-            print(trade_format_string.format( # Use the trade format string for trade data
+            report_output += trade_format_string.format( # Use the trade format string for trade data
                 trade.symbol,
                 trade.direction,
                 trade.entry_time.strftime('%Y-%m-%d %H:%M'),
@@ -884,49 +916,69 @@ class InsideBarBreakoutStrategy:
                 initial_risk_formatted, # Use the formatted initial risk
                 trade.pnl,
                 trade.status
-            ))
-        print("="*50)
+            )
+        report_output += "="*50 + "\n"
+
+        return report_output
 
 
-    def generate_summary_report(self):
-        """Generates a consolidated performance summary."""
+    def generate_summary_report(self) -> str:
+        """Generates a consolidated performance summary and returns as a string."""
+        report_output = ""
         total_pnl = sum(t.pnl for t in self.trades)
         winning_trades = [t for t in self.trades if t.pnl > 0]
         losing_trades = [t for t in self.trades if t.pnl <= 0]
 
         total_trades = len(self.trades)
         win_rate = len(winning_trades) / total_trades if total_trades else 0
+        max_dd = self.calculate_drawdown() # Calculate max drawdown
 
-        print("\n" + "="*50)
-        print("         INSIDE BAR BREAKOUT BACKTEST SUMMARY")
-        print("="*50)
-        print(f"Initial Capital: {self.initial_capital:,.2f}")
-        print(f"Risk per Trade: {self.risk_per_trade_percent*100:.2f}%")
-        print(f"Entry Timeframe: {self.entry_tf}")
-        print(f"HTF Confirmation TFs: {self.higher_timeframes}")
-        print(f"Symbols Tested: {len(self.ohlcv_data)}")
-        print(f"Total Trades: {total_trades}")
-        print(f"Winning Trades: {len(winning_trades)}")
-        print(f"Losing Trades: {len(losing_trades)}")
-        print(f"Win Rate: {win_rate * 100:.2f}%")
-        print(f"Total PnL (Currency): {total_pnl:.2f}") # Updated PnL unit
-        print("="*50)
+        report_output += "\n" + "="*50 + "\n"
+        report_output += "         INSIDE BAR BREAKOUT BACKTEST SUMMARY\n"
+        report_output += "="*50 + "\n"
+        report_output += f"Initial Capital: {self.initial_capital:,.2f}\n"
+        report_output += f"Risk per Trade: {self.risk_per_trade_percent*100:.2f}%\n"
+        report_output += f"Entry Timeframe: {self.entry_tf}\n"
+        report_output += f"HTF Confirmation TFs: {self.higher_timeframes}\n"
+        report_output += f"Symbols Tested: {len(self.ohlcv_data)}\n"
+        report_output += f"Total Trades: {total_trades}\n"
+        report_output += f"Winning Trades: {len(winning_trades)}\n"
+        report_output += f"Losing Trades: {len(losing_trades)}\n"
+        report_output += f"Win Rate: {win_rate * 100:.2f}%\n"
+        report_output += f"Total PnL (Currency): {total_pnl:.2f}\n" # Updated PnL unit
+        report_output += f"Maximum Drawdown (Currency): {max_dd:.2f}\n" # Display max drawdown
+        report_output += "="*50 + "\n"
 
-        # open_trade is not tracked in the multi-threaded version this way.
-        # if self.open_trade:
-        #     print(f"NOTE: 1 trade remains open on {self.open_trade.symbol}.")
+        return report_output
 
 
-    def generate_report(self):
-        """Generates a consolidated performance report."""
-        self.generate_summary_report()
-        self.generate_detailed_report()
+    def generate_report(self, save_to_files=False):
+        """Generates consolidated performance reports and optionally saves them to files."""
+        summary_report = self.generate_summary_report()
+        detailed_report = self.generate_detailed_report()
+
+        # Print reports to console
+        print(summary_report)
+        print(detailed_report)
+
+        if save_to_files:
+            summary_filename = "backtest_summary_report.txt"
+            detailed_filename = "backtest_detailed_report.txt"
+
+            with open(summary_filename, "w") as f:
+                f.write(summary_report)
+            print(f"\nSummary report saved to {summary_filename}")
+
+            with open(detailed_filename, "w") as f:
+                f.write(detailed_report)
+            print(f"Detailed report saved to {detailed_filename}")
+
 
 # --- EXECUTION ---
+
+DATA_FOLDER = "/content"
 DATA_FOLDER = "D:\\py_code_workspace\\NSE _STOCK _DATA"
    
-#DATA_FOLDER = "D://"
-
 # Initialize the strategy and backtester
 backtester = InsideBarBreakoutStrategy(
     data_path=DATA_FOLDER,
@@ -943,5 +995,5 @@ backtester.load_all_market_data()
 # Run the bar-by-bar backtest
 backtester.run_backtest()
 
-# Generate the performance summary and detailed report
-backtester.generate_report()
+# Generate the performance summary and detailed report and save them to files
+backtester.generate_report(save_to_files=True)
