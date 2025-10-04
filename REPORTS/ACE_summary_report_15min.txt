@@ -1,0 +1,9 @@
+--- Summary for ACE ---
+Total Trades: 471
+Winning Trades: 184
+Losing Trades: 287
+Win Rate (%): 39.07%
+Total PnL (Currency): 1211307.67
+Maximum Drawdown (Currency): 174703.82
+Sharpe Ratio (Annualized): 0.69
+Sortino Ratio (Annualized): 0.73

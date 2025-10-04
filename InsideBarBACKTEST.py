@@ -11,6 +11,7 @@ import pandas as pd
 import mplfinance as mpf
 from pandas.tseries.offsets import DateOffset
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Assume calculate_ema and calculate_atr are defined elsewhere
 # Example placeholder functions (replace with your actual implementations):
@@ -80,7 +81,7 @@ class InsideBarBreakoutStrategy:
         self.max_workers = max_workers # Number of worker threads for multi-threading
         self.initial_capital = initial_capital # Add initial capital
         self.risk_per_trade_percent = risk_per_trade_percent # Add risk per trade percentage
-
+        self.batch_size = 5
 
         # Dynamically determine HTFs based on entry_tf
         self.higher_timeframes = self._get_higher_timeframes(entry_timeframe)
@@ -1119,13 +1120,13 @@ class InsideBarBreakoutStrategy:
 
         if save_to_files:
             # 1. Save Consolidated Summary Report
-            summary_filename = os.path.join(reports_dir, "consolidated_summary_report.txt")
+            summary_filename = os.path.join(reports_dir, f"consolidated_summary_report_{self.entry_tf}.txt")
             with open(summary_filename, "w") as f:
                 f.write(summary_report)
             print(f"\nConsolidated summary report saved to {summary_filename}")
 
             # 2. Save Detailed Trade Report
-            detailed_filename = os.path.join(reports_dir, "detailed_trade_report.txt")
+            detailed_filename = os.path.join(reports_dir, "detailed_trade_report_{self.entry_tf}.txt")
             with open(detailed_filename, "w") as f:
                 f.write(detailed_report)
             print(f"Detailed trade report saved to {detailed_filename}")
@@ -1134,7 +1135,7 @@ class InsideBarBreakoutStrategy:
             per_symbol_metrics = self.calculate_per_symbol_metrics()
             if per_symbol_metrics:
                 for symbol, metrics in per_symbol_metrics.items():
-                    symbol_report_filename = os.path.join(reports_dir, f"{symbol}_summary_report.txt")
+                    symbol_report_filename = os.path.join(reports_dir, f"{symbol}_summary_report_{self.entry_tf}.txt")
                     with open(symbol_report_filename, "w") as f:
                         f.write(f"--- Summary for {symbol} ---\n")
                         f.write(f"Total Trades: {metrics['Total Trades']}\n")
@@ -1255,7 +1256,8 @@ class InsideBarBreakoutStrategy:
                     colors = ['r']*len(sl_lines) + ['g']*len(tp_lines)
 
                     # Generate and save the chart
-                    filename = os.path.join(reports_dir, f"{symbol}_trades_{chart_num}.png")
+
+                    filename = os.path.join(reports_dir, f"{symbol}_trades_{chart_num}_{self.entry_tf}.png")
                     try:
                         mpf.plot(chart_df,
                                  type='candle',
@@ -1279,7 +1281,7 @@ class InsideBarBreakoutStrategy:
 
 # --- EXECUTION ---
 
-DATA_FOLDER = "." # Use current directory for data files
+DATA_FOLDER = "D://py_code_workspace//NSE _STOCK _DATA" # Use current directory for data files
 REPORTS_DIR = "REPORTS" # Define reports directory
 
 # Create reports directory if it doesn't exist
@@ -1289,7 +1291,7 @@ if not os.path.exists(REPORTS_DIR):
 # Initialize the strategy and backtester
 backtester = InsideBarBreakoutStrategy(
     data_path=DATA_FOLDER,
-    entry_timeframe='3min',
+    entry_timeframe='15min',
     risk_reward=3.5,
     max_workers=os.cpu_count(), # Use number of CPU cores for max workers
     initial_capital=1000000, # Initial capital

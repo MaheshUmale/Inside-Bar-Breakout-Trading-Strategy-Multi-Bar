@@ -1,0 +1,9 @@
+--- Summary for AVANTIFEED ---
+Total Trades: 822
+Winning Trades: 352
+Losing Trades: 470
+Win Rate (%): 42.82%
+Total PnL (Currency): 3243521.19
+Maximum Drawdown (Currency): 317582.57
+Sharpe Ratio (Annualized): 1.31
+Sortino Ratio (Annualized): 2.06

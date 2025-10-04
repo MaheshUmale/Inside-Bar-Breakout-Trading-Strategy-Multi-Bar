@@ -1,0 +1,9 @@
+--- Summary for ASTERDM ---
+Total Trades: 284
+Winning Trades: 102
+Losing Trades: 182
+Win Rate (%): 35.92%
+Total PnL (Currency): -21046.15
+Maximum Drawdown (Currency): 253078.94
+Sharpe Ratio (Annualized): -0.03
+Sortino Ratio (Annualized): -0.02

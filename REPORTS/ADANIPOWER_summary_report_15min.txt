@@ -1,0 +1,9 @@
+--- Summary for ADANIPOWER ---
+Total Trades: 267
+Winning Trades: 106
+Losing Trades: 161
+Win Rate (%): 39.70%
+Total PnL (Currency): 746238.73
+Maximum Drawdown (Currency): 114559.09
+Sharpe Ratio (Annualized): 0.77
+Sortino Ratio (Annualized): 0.91

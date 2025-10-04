@@ -1,0 +1,9 @@
+--- Summary for AREM ---
+Total Trades: 1027
+Winning Trades: 408
+Losing Trades: 619
+Win Rate (%): 39.73%
+Total PnL (Currency): 2307015.37
+Maximum Drawdown (Currency): 284787.95
+Sharpe Ratio (Annualized): 0.84
+Sortino Ratio (Annualized): 1.39

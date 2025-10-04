@@ -1,0 +1,9 @@
+--- Summary for ATUL ---
+Total Trades: 1416
+Winning Trades: 517
+Losing Trades: 899
+Win Rate (%): 36.51%
+Total PnL (Currency): 5396619.56
+Maximum Drawdown (Currency): 751434.21
+Sharpe Ratio (Annualized): 1.17
+Sortino Ratio (Annualized): 2.30

@@ -1,0 +1,9 @@
+--- Summary for ABB ---
+Total Trades: 1268
+Winning Trades: 519
+Losing Trades: 749
+Win Rate (%): 40.93%
+Total PnL (Currency): 6878369.00
+Maximum Drawdown (Currency): 401686.32
+Sharpe Ratio (Annualized): 1.68
+Sortino Ratio (Annualized): 3.20

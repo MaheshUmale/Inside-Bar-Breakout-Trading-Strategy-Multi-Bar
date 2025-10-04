@@ -1,0 +1,9 @@
+--- Summary for ABCAPITAL ---
+Total Trades: 55
+Winning Trades: 18
+Losing Trades: 37
+Win Rate (%): 32.73%
+Total PnL (Currency): -125246.19
+Maximum Drawdown (Currency): 146640.64
+Sharpe Ratio (Annualized): -0.72
+Sortino Ratio (Annualized): -0.16

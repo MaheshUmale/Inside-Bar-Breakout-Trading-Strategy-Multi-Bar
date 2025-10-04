@@ -1,0 +1,9 @@
+--- Summary for ASAHIINDIA ---
+Total Trades: 645
+Winning Trades: 245
+Losing Trades: 400
+Win Rate (%): 37.98%
+Total PnL (Currency): 758644.79
+Maximum Drawdown (Currency): 224863.30
+Sharpe Ratio (Annualized): 0.44
+Sortino Ratio (Annualized): 0.49

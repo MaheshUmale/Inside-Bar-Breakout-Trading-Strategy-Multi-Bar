@@ -1,0 +1,9 @@
+--- Summary for ADANIPORTS ---
+Total Trades: 737
+Winning Trades: 323
+Losing Trades: 414
+Win Rate (%): 43.83%
+Total PnL (Currency): 2992595.98
+Maximum Drawdown (Currency): 180204.38
+Sharpe Ratio (Annualized): 1.31
+Sortino Ratio (Annualized): 1.72

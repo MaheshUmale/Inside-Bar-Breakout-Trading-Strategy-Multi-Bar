@@ -1,0 +1,9 @@
+--- Summary for ADANIENT ---
+Total Trades: 883
+Winning Trades: 398
+Losing Trades: 485
+Win Rate (%): 45.07%
+Total PnL (Currency): 6470620.82
+Maximum Drawdown (Currency): 244693.88
+Sharpe Ratio (Annualized): 1.82
+Sortino Ratio (Annualized): 2.92

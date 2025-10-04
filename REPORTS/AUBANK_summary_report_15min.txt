@@ -1,0 +1,9 @@
+--- Summary for AUBANK ---
+Total Trades: 533
+Winning Trades: 213
+Losing Trades: 320
+Win Rate (%): 39.96%
+Total PnL (Currency): 804992.06
+Maximum Drawdown (Currency): 235064.62
+Sharpe Ratio (Annualized): 0.56
+Sortino Ratio (Annualized): 0.70

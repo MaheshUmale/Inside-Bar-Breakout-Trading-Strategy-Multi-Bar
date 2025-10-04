@@ -1,0 +1,9 @@
+--- Summary for AFFLE ---
+Total Trades: 645
+Winning Trades: 278
+Losing Trades: 367
+Win Rate (%): 43.10%
+Total PnL (Currency): 3183453.15
+Maximum Drawdown (Currency): 279290.66
+Sharpe Ratio (Annualized): 1.59
+Sortino Ratio (Annualized): 2.90

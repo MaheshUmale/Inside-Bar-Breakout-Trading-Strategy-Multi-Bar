@@ -1,0 +1,9 @@
+--- Summary for APLLTD ---
+Total Trades: 949
+Winning Trades: 359
+Losing Trades: 590
+Win Rate (%): 37.83%
+Total PnL (Currency): 466766.19
+Maximum Drawdown (Currency): 558489.21
+Sharpe Ratio (Annualized): 0.19
+Sortino Ratio (Annualized): 0.26

@@ -1,0 +1,9 @@
+--- Summary for ASTRAZEN ---
+Total Trades: 1455
+Winning Trades: 541
+Losing Trades: 914
+Win Rate (%): 37.18%
+Total PnL (Currency): 5072072.60
+Maximum Drawdown (Currency): 641548.09
+Sharpe Ratio (Annualized): 1.16
+Sortino Ratio (Annualized): 2.39

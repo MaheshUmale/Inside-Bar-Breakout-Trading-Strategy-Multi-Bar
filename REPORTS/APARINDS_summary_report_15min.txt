@@ -1,0 +1,9 @@
+--- Summary for APARINDS ---
+Total Trades: 1130
+Winning Trades: 462
+Losing Trades: 668
+Win Rate (%): 40.88%
+Total PnL (Currency): 5661623.67
+Maximum Drawdown (Currency): 409544.42
+Sharpe Ratio (Annualized): 1.51
+Sortino Ratio (Annualized): 2.72

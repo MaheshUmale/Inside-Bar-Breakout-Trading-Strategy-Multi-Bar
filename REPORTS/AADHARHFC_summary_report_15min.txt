@@ -1,0 +1,9 @@
+--- Summary for AADHARHFC ---
+Total Trades: 102
+Winning Trades: 42
+Losing Trades: 60
+Win Rate (%): 41.18%
+Total PnL (Currency): -26560.01
+Maximum Drawdown (Currency): 167952.57
+Sharpe Ratio (Annualized): -0.13
+Sortino Ratio (Annualized): -0.16

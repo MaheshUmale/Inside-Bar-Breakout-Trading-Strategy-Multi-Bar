@@ -1,0 +1,9 @@
+--- Summary for ALKYLAMINE ---
+Total Trades: 974
+Winning Trades: 380
+Losing Trades: 594
+Win Rate (%): 39.01%
+Total PnL (Currency): 3000436.49
+Maximum Drawdown (Currency): 409614.99
+Sharpe Ratio (Annualized): 0.91
+Sortino Ratio (Annualized): 1.35

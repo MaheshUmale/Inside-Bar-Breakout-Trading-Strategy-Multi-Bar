@@ -1,0 +1,9 @@
+--- Summary for APLAPOLLO ---
+Total Trades: 645
+Winning Trades: 244
+Losing Trades: 401
+Win Rate (%): 37.83%
+Total PnL (Currency): 1280215.78
+Maximum Drawdown (Currency): 618421.74
+Sharpe Ratio (Annualized): 0.56
+Sortino Ratio (Annualized): 0.67

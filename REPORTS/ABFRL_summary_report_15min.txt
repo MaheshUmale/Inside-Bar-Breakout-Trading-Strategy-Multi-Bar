@@ -1,0 +1,9 @@
+--- Summary for ABFRL ---
+Total Trades: 172
+Winning Trades: 60
+Losing Trades: 112
+Win Rate (%): 34.88%
+Total PnL (Currency): 39659.93
+Maximum Drawdown (Currency): 181609.18
+Sharpe Ratio (Annualized): 0.06
+Sortino Ratio (Annualized): 0.04

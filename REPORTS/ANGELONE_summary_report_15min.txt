@@ -1,0 +1,9 @@
+--- Summary for ANGELONE ---
+Total Trades: 666
+Winning Trades: 300
+Losing Trades: 366
+Win Rate (%): 45.05%
+Total PnL (Currency): 4985466.08
+Maximum Drawdown (Currency): 199681.44
+Sharpe Ratio (Annualized): 2.29
+Sortino Ratio (Annualized): 4.94

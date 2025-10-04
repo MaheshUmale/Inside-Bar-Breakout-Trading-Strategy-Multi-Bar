@@ -1,0 +1,9 @@
+--- Summary for AARTIIND ---
+Total Trades: 588
+Winning Trades: 243
+Losing Trades: 345
+Win Rate (%): 41.33%
+Total PnL (Currency): 1690201.26
+Maximum Drawdown (Currency): 233487.08
+Sharpe Ratio (Annualized): 0.90
+Sortino Ratio (Annualized): 1.10

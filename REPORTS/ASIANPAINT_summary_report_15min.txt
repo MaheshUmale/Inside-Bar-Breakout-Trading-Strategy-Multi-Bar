@@ -1,0 +1,9 @@
+--- Summary for ASIANPAINT ---
+Total Trades: 1189
+Winning Trades: 513
+Losing Trades: 676
+Win Rate (%): 43.15%
+Total PnL (Currency): 4864361.22
+Maximum Drawdown (Currency): 353028.21
+Sharpe Ratio (Annualized): 1.41
+Sortino Ratio (Annualized): 2.49

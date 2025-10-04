@@ -1,0 +1,9 @@
+--- Summary for ACC ---
+Total Trades: 1312
+Winning Trades: 515
+Losing Trades: 797
+Win Rate (%): 39.25%
+Total PnL (Currency): 3222983.60
+Maximum Drawdown (Currency): 438675.88
+Sharpe Ratio (Annualized): 0.90
+Sortino Ratio (Annualized): 1.60

@@ -1,0 +1,9 @@
+--- Summary for AEGISLOG ---
+Total Trades: 546
+Winning Trades: 221
+Losing Trades: 325
+Win Rate (%): 40.48%
+Total PnL (Currency): 583616.74
+Maximum Drawdown (Currency): 404127.02
+Sharpe Ratio (Annualized): 0.38
+Sortino Ratio (Annualized): 0.40

@@ -1,0 +1,9 @@
+--- Summary for AMBER ---
+Total Trades: 1042
+Winning Trades: 427
+Losing Trades: 615
+Win Rate (%): 40.98%
+Total PnL (Currency): 5900728.39
+Maximum Drawdown (Currency): 385463.27
+Sharpe Ratio (Annualized): 1.76
+Sortino Ratio (Annualized): 3.56

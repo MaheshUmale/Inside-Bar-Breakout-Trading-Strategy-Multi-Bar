@@ -1,0 +1,9 @@
+--- Summary for AIAENG ---
+Total Trades: 1303
+Winning Trades: 458
+Losing Trades: 845
+Win Rate (%): 35.15%
+Total PnL (Currency): 3059627.47
+Maximum Drawdown (Currency): 383887.53
+Sharpe Ratio (Annualized): 0.76
+Sortino Ratio (Annualized): 1.32

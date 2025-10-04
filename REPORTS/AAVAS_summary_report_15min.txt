@@ -1,0 +1,9 @@
+--- Summary for AAVAS ---
+Total Trades: 878
+Winning Trades: 322
+Losing Trades: 556
+Win Rate (%): 36.67%
+Total PnL (Currency): 2721649.08
+Maximum Drawdown (Currency): 474833.43
+Sharpe Ratio (Annualized): 1.00
+Sortino Ratio (Annualized): 1.88

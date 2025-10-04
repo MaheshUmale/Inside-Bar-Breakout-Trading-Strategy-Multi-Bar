@@ -1,0 +1,9 @@
+--- Summary for ALOKINDS ---
+Total Trades: 2
+Winning Trades: 1
+Losing Trades: 1
+Win Rate (%): 50.00%
+Total PnL (Currency): -4494.88
+Maximum Drawdown (Currency): 6251.56
+Sharpe Ratio (Annualized): -0.44
+Sortino Ratio (Annualized): 0.00
