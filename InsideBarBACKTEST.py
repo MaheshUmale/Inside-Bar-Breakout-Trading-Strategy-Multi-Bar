@@ -64,7 +64,7 @@ class InsideBarBreakoutStrategy:
     # Define a fixed hierarchy of supported timeframes using standard Pandas aliases
     SUPPORTED_TFS = ['3min', '5min', '15min', '30min', '1h', '2h', '1D', '1W'] # Updated aliases
 
-    def __init__(self, data_path,filePattern, entry_timeframe: str = '5min', max_ibr_lookback=5, risk_reward=1.5, max_workers=None, initial_capital=1000000, risk_per_trade_percent=0.02):
+    def __init__(self, data_path,filePattern, entry_timeframe: str = '5min', max_ibr_lookback=5, risk_reward=1.5, max_workers=None, initial_capital=1000000, risk_per_trade_percent=0.02, rvol_condition_value=3.0):
         self.data_path = data_path
         self.filePattern = filePattern
         if entry_timeframe not in self.SUPPORTED_TFS:
@@ -77,6 +77,7 @@ class InsideBarBreakoutStrategy:
         self.safety_buffer = 5  # 5 Ticks / Points buffer for SL beyond MB
         self.debug_mode = False # <-- NEW: Set to True to enable rejection logging
         self.rvol_lookback_bars = 20 # Look back 20 bars for calculating average volume for Rvol
+        self.rvol_condition_value = rvol_condition_value # Condition for Rvol check
         self.lower_tf_for_volume = '5min' # <-- NEW: Define the lower timeframe for volume check
         self.max_workers = max_workers # Number of worker threads for multi-threading
         self.initial_capital = initial_capital # Add initial capital
@@ -135,10 +136,28 @@ class InsideBarBreakoutStrategy:
                     'Volume': 'sum'
                 }).dropna()
 
-                # Calculate indicators (EMA(20) and ATR(14) for all relevant TFs)
+                # Calculate indicators for all relevant TFs
                 if not resampled_df.empty:
-                    resampled_df['EMA'] = calculate_ema(resampled_df, period=20)
-                    resampled_df['ATR'] = calculate_atr(resampled_df, period=14)
+                    # EMA and ATR
+                    resampled_df['EMA20'] = calculate_ema(resampled_df, period=20)
+                    resampled_df['ATR14'] = calculate_atr(resampled_df, period=14)
+                    resampled_df['ATR20'] = calculate_atr(resampled_df, period=20)
+
+                    # Bollinger Bands (20-period, 2 stdev)
+                    resampled_df['BB_mid'] = resampled_df['Close'].rolling(window=20).mean()
+                    bb_std = resampled_df['Close'].rolling(window=20).std()
+                    resampled_df['BB_upper'] = resampled_df['BB_mid'] + (bb_std * 2)
+                    resampled_df['BB_lower'] = resampled_df['BB_mid'] - (bb_std * 2)
+
+                    # Keltner Channels (20-period, 1.5 ATR)
+                    resampled_df['KC_mid'] = resampled_df['EMA20'] # Use EMA20 as the middle line
+                    resampled_df['KC_upper'] = resampled_df['KC_mid'] + (resampled_df['ATR20'] * 1.5)
+                    resampled_df['KC_lower'] = resampled_df['KC_mid'] - (resampled_df['ATR20'] * 1.5)
+
+                    # Squeeze Condition
+                    resampled_df['Squeeze'] = (resampled_df['BB_upper'] < resampled_df['KC_upper']) & \
+                                              (resampled_df['BB_lower'] > resampled_df['KC_lower'])
+
                     resampled_data[tf] = resampled_df
                 elif self.debug_mode:
                      print(f"  DEBUG: Resampling {os.path.basename(file_path)} to {tf} resulted in empty DataFrame.")
@@ -274,8 +293,8 @@ class InsideBarBreakoutStrategy:
             checked_tfs += 1
 
             current_close = htf_bar['Close']
-            current_ema = htf_bar['EMA']
-            prev_ema = prev_htf_bar['EMA']
+            current_ema = htf_bar['EMA20']
+            prev_ema = prev_htf_bar['EMA20']
 
             # Trend Check: Close vs EMA AND EMA slope
             # Adjusted EMA slope check to be strictly greater/less than
@@ -305,6 +324,68 @@ class InsideBarBreakoutStrategy:
 
 
         return is_aligned
+
+
+    def check_mtf_squeeze(self, symbol, current_time):
+        """
+        Checks if the Squeeze condition is active on any of the higher timeframes.
+        Returns: True if a squeeze is found on at least one HTF, False otherwise.
+        """
+        in_squeeze = False
+        checked_tfs = 0
+
+        for tf in self.higher_timeframes:
+            if tf not in self.ohlcv_data[symbol]:
+                if self.debug_mode:
+                    print(f"  DEBUG: Skipping Squeeze check for {symbol} on {tf} at {current_time} - data not loaded.")
+                continue
+
+            df_htf = self.ohlcv_data[symbol][tf]
+
+            try:
+                preceding_bars = df_htf.index[df_htf.index <= current_time]
+                if preceding_bars.empty:
+                    raise IndexError("No preceding bars found")
+
+                htf_bar_index_in_filtered = len(preceding_bars) - 1
+                htf_bar_index = df_htf.index.get_loc(preceding_bars[htf_bar_index_in_filtered])
+
+                htf_bar = df_htf.iloc[htf_bar_index]
+
+                if htf_bar.name > current_time:
+                    if self.debug_mode:
+                        print(f"  DEBUG: Found HTF bar {htf_bar.name} which is after current_time {current_time} for {symbol} on {tf}. Skipping Squeeze check.")
+                    continue
+
+            except (IndexError, KeyError) as e:
+                if self.debug_mode:
+                    print(f"  DEBUG: Not enough data for Squeeze check for {symbol} on {tf} at {current_time}. Skipping. Reason: {e}")
+                continue
+
+            checked_tfs += 1
+
+            if 'Squeeze' in htf_bar and htf_bar['Squeeze']:
+                in_squeeze = True
+                if self.debug_mode:
+                    print(f"  DEBUG: Squeeze condition PASSED for {symbol} on {tf} at {current_time}. HTF Bar Time={htf_bar.name}")
+                # We can break early since we only need one HTF to be in a squeeze
+                break
+            elif self.debug_mode:
+                print(f"  DEBUG: Squeeze condition FAILED for {symbol} on {tf} at {current_time}. HTF Bar Time={htf_bar.name}")
+
+
+        if not in_squeeze and checked_tfs > 0:
+            if self.debug_mode:
+                 print(f"REJECTED: MTF Squeeze check failed for {symbol} at {current_time}. No squeeze found in {checked_tfs} checked TFs.")
+        elif checked_tfs == 0:
+            if self.debug_mode:
+                 print(f"DEBUG: No higher timeframes to check for {symbol} at {current_time}. Squeeze check PASSED by default.")
+            # If no HTF to check (e.g., entry is '1W'), we can't fail the condition.
+            # Depending on strictness, this could be False. For now, let's allow it.
+            return True
+
+
+        return in_squeeze
 
 
     # Simplifying find_inside_bar_breakout to look for a single Inside Bar
@@ -442,8 +523,8 @@ class InsideBarBreakoutStrategy:
 
 
             # Check ATR trailing stop (only after enough bars for ATR calculation and if not already at BE or beyond)
-            if 'ATR' in current_bar and not pd.isna(current_bar['ATR']) and current_bar['ATR'] > 0:
-                atr_stop_level = 2 * current_bar['ATR']
+            if 'ATR14' in current_bar and not pd.isna(current_bar['ATR14']) and current_bar['ATR14'] > 0:
+                atr_stop_level = 2 * current_bar['ATR14']
 
                 if trade.direction == 'LONG':
                     new_sl = current_bar['Close'] - atr_stop_level
@@ -579,11 +660,11 @@ class InsideBarBreakoutStrategy:
                 if self.debug_mode:
                      print(f"DEBUG: Long breakout condition met at {next_bar.name} on {symbol}.")
 
-                # Check MTF trend alignment
-                mtf_aligned_long = self.check_mtf_trend(symbol, current_time, 'LONG')
+                # Check for MTF Squeeze
+                mtf_squeeze_found = self.check_mtf_squeeze(symbol, current_time)
 
-                if mtf_aligned_long:
-                    # Check Entry TF Volume Breakout Confirmation (Rvol > 1)
+                if mtf_squeeze_found:
+                    # Check Entry TF Volume Breakout Confirmation (Rvol > condition value)
                     lookback_slice = df_et.iloc[max(0, i - self.rvol_lookback_bars):i] # Bars BEFORE the breakout bar
                     if not lookback_slice.empty and lookback_slice['Volume'].mean() > 0:
                          average_volume = lookback_slice['Volume'].mean()
@@ -591,9 +672,9 @@ class InsideBarBreakoutStrategy:
                          rvol = breakout_volume / average_volume
 
                          if self.debug_mode:
-                              print(f"DEBUG: Checking Rvol for LONG breakout: Breakout Vol: {breakout_volume:.0f}, Avg Lookback Vol ({self.rvol_lookback_bars} bars): {average_volume:.0f}, Rvol: {rvol:.2f}")
+                              print(f"DEBUG: Checking Rvol for LONG breakout: Breakout Vol: {breakout_volume:.0f}, Avg Lookback Vol ({self.rvol_lookback_bars} bars): {average_volume:.0f}, Rvol: {rvol:.2f}, Condition: > {self.rvol_condition_value}")
 
-                         if rvol > 1.0: # Rvol > 1 condition
+                         if rvol > self.rvol_condition_value: # Rvol condition
                              # Rvol condition met. Now check Lower Timeframe Volume.
 
                              lower_tf_volume_confirmed = True # Assume true initially
@@ -687,10 +768,10 @@ class InsideBarBreakoutStrategy:
             if short_breakout_condition:
                 if self.debug_mode:
                     print(f"DEBUG: Short breakout condition met at {next_bar.name} on {symbol}.")
-                # Check MTF trend alignment
-                mtf_aligned_short = self.check_mtf_trend(symbol, current_time, 'SHORT')
+                # Check for MTF Squeeze
+                mtf_squeeze_found = self.check_mtf_squeeze(symbol, current_time)
 
-                if mtf_aligned_short:
+                if mtf_squeeze_found:
                      # Check Volume Breakout Confirmation on the entry timeframe breakout bar
                     lookback_slice = df_et.iloc[max(0, i - self.rvol_lookback_bars):i] # Bars BEFORE the breakout bar
                     if not lookback_slice.empty and lookback_slice['Volume'].mean() > 0:
@@ -699,9 +780,9 @@ class InsideBarBreakoutStrategy:
                          rvol = breakout_volume / average_volume
 
                          if self.debug_mode:
-                              print(f"DEBUG: Checking Rvol for SHORT breakout: Breakout Vol: {breakout_volume:.0f}, Avg Lookback Vol ({self.rvol_lookback_bars} bars): {average_volume:.0f}, Rvol: {rvol:.2f}")
+                              print(f"DEBUG: Checking Rvol for SHORT breakout: Breakout Vol: {breakout_volume:.0f}, Avg Lookback Vol ({self.rvol_lookback_bars} bars): {average_volume:.0f}, Rvol: {rvol:.2f}, Condition: > {self.rvol_condition_value}")
 
-                         if rvol > 1.0: # Rvol > 1 condition
+                         if rvol > self.rvol_condition_value: # Rvol condition
                              # Rvol condition met. Now check Lower Timeframe Volume.
 
                              lower_tf_volume_confirmed = True # Assume true initially
@@ -832,8 +913,8 @@ class InsideBarBreakoutStrategy:
 
 
              # Check ATR trailing stop (only after enough bars for ATR calculation and if not already at BE or beyond)
-             if 'ATR' in current_bar and not pd.isna(current_bar['ATR']) and current_bar['ATR'] > 0:
-                 atr_stop_level = 2 * current_bar['ATR']
+             if 'ATR14' in current_bar and not pd.isna(current_bar['ATR14']) and current_bar['ATR14'] > 0:
+                 atr_stop_level = 2 * current_bar['ATR14']
 
                  if trade.direction == 'LONG':
                      new_sl = current_bar['Close'] - atr_stop_level
