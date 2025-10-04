@@ -606,7 +606,8 @@ class InsideBarBreakoutStrategy:
             return [], None # Return empty list of trades and no open trade
 
 
-        for i in range(min_bars, len(df_et)):
+        # -1 to allow looking at the next bar for entry
+        for i in range(min_bars, len(df_et) - 1):
             current_time = df_et.index[i]
             current_bar = df_et.iloc[i]
 
@@ -650,214 +651,167 @@ class InsideBarBreakoutStrategy:
             short_tp = short_entry - (short_risk * self.risk_reward)
 
             # 2. MTF and Entry Validation
-            next_bar = df_et.iloc[i] # The bar where the breakout occurs (same as current_bar)
+            trigger_bar = df_et.iloc[i]  # The bar where the breakout is detected
+            entry_bar = df_et.iloc[i + 1]    # The bar where the trade will be entered
 
-            long_breakout_condition = next_bar['High'] >= long_entry
-            short_breakout_condition = next_bar['Low'] <= short_entry
+            long_breakout_condition = trigger_bar['High'] >= long_entry
+            short_breakout_condition = trigger_bar['Low'] <= short_entry
 
             # --- LONG BREAKOUT CHECK ---
             if long_breakout_condition:
                 if self.debug_mode:
-                     print(f"DEBUG: Long breakout condition met at {next_bar.name} on {symbol}.")
+                    print(f"DEBUG: Long breakout condition met on trigger bar {trigger_bar.name} on {symbol}.")
 
                 # Check for MTF Squeeze
                 mtf_squeeze_found = self.check_mtf_squeeze(symbol, current_time)
 
                 if mtf_squeeze_found:
-                    # Check Entry TF Volume Breakout Confirmation (Rvol > condition value)
-                    lookback_slice = df_et.iloc[max(0, i - self.rvol_lookback_bars):i] # Bars BEFORE the breakout bar
+                    # Check Entry TF Volume Breakout Confirmation (Rvol > condition value) on the trigger bar
+                    lookback_slice = df_et.iloc[max(0, i - self.rvol_lookback_bars):i]
                     if not lookback_slice.empty and lookback_slice['Volume'].mean() > 0:
-                         average_volume = lookback_slice['Volume'].mean()
-                         breakout_volume = next_bar['Volume']
-                         rvol = breakout_volume / average_volume
+                        average_volume = lookback_slice['Volume'].mean()
+                        breakout_volume = trigger_bar['Volume']
+                        rvol = breakout_volume / average_volume
 
-                         if self.debug_mode:
-                              print(f"DEBUG: Checking Rvol for LONG breakout: Breakout Vol: {breakout_volume:.0f}, Avg Lookback Vol ({self.rvol_lookback_bars} bars): {average_volume:.0f}, Rvol: {rvol:.2f}, Condition: > {self.rvol_condition_value}")
+                        if self.debug_mode:
+                            print(f"DEBUG: Checking Rvol for LONG breakout: Breakout Vol: {breakout_volume:.0f}, Avg Lookback Vol ({self.rvol_lookback_bars} bars): {average_volume:.0f}, Rvol: {rvol:.2f}, Condition: > {self.rvol_condition_value}")
 
-                         if rvol > self.rvol_condition_value: # Rvol condition
-                             # Rvol condition met. Now check Lower Timeframe Volume.
+                        if rvol > self.rvol_condition_value:
+                            # Lower TF Volume Check on the trigger bar
+                            lower_tf_volume_confirmed = self._check_lower_tf_volume_spike(symbol, df_lower_tf_symbol, trigger_bar.name, 'LONG')
 
-                             lower_tf_volume_confirmed = True # Assume true initially
-                             if df_lower_tf_symbol is not None:
-                                 # Get lower timeframe bars within the entry timeframe breakout bar's time range
-                                 entry_tf_freq = pd.to_timedelta(self.entry_tf)
-                                 # Calculate the start time of the current entry TF bar
-                                 breakout_bar_start_time = current_time - entry_tf_freq
+                            if lower_tf_volume_confirmed:
+                                # --- All conditions met, prepare for entry on the next bar's open ---
+                                actual_entry_price = entry_bar['Open']
 
-                                 # Select lower TF bars that fall exactly within the current entry TF bar's time range
-                                 # Use inclusive start and end for robust selection
-                                 lower_tf_bars_in_breakout_bar = df_lower_tf_symbol.loc[
-                                     (df_lower_tf_symbol.index >= breakout_bar_start_time) & (df_lower_tf_symbol.index <= current_time)
-                                 ]
+                                # Invalidation Check: Ensure entry price hasn't gapped below SL
+                                if actual_entry_price <= long_sl:
+                                    if self.debug_mode:
+                                        print(f"REJECTED: LONG trade invalidated due to gap down. Entry: {actual_entry_price:.2f}, SL: {long_sl:.2f} on {symbol} at {entry_bar.name}")
+                                    continue
 
-                                 if not lower_tf_bars_in_breakout_bar.empty:
-                                      # Check for a volume spike on the lower timeframe bars
-                                      # For simplicity, check if max lower TF volume is > 1.5 * average recent lower TF volume?
-                                      # Need to calculate average recent lower TF volume *before* the breakout bar started
-                                      recent_lower_tf_bars = df_lower_tf_symbol.loc[df_lower_tf_symbol.index < breakout_bar_start_time]
-                                      # Look back a window equivalent to 5 entry TF bars in the lower timeframe
-                                      try:
-                                          lower_tf_freq_td = pd.to_timedelta(self.lower_tf_for_volume)
-                                          window_size_lower_tf = int(entry_tf_freq.total_seconds() / lower_tf_freq_td.total_seconds()) * 5
-                                          recent_lower_tf_bars = recent_lower_tf_bars.tail(window_size_lower_tf)
-                                      except Exception as e:
-                                           if self.debug_mode:
-                                                print(f"DEBUG: Error calculating lower TF window size for {symbol} at {current_time}: {e}. Skipping lower TF volume check.")
-                                           lower_tf_volume_confirmed = False # Treat as not confirmed if calculation fails
-                                           recent_lower_tf_bars = pd.DataFrame() # Ensure empty to skip avg volume calculation
-
-
-                                      if not recent_lower_tf_bars.empty and recent_lower_tf_bars['Volume'].mean() > 0:
-                                           avg_recent_lower_tf_volume = recent_lower_tf_bars['Volume'].mean()
-                                           max_lower_tf_volume_in_breakout_bar = lower_tf_bars_in_breakout_bar['Volume'].max()
-                                           lower_tf_volume_spike_threshold = 1.5 * avg_recent_lower_tf_volume
-
-                                           if self.debug_mode:
-                                                print(f"DEBUG: Checking LOWER TF ({self.lower_tf_for_volume}) LONG volume breakout: Max Vol: {max_lower_tf_volume_in_breakout_bar:.0f}, Avg Recent Vol: {avg_recent_lower_tf_volume:.0f}, Threshold: {lower_tf_volume_spike_threshold:.0f}")
-
-
-                                           if max_lower_tf_volume_in_breakout_bar > lower_tf_volume_spike_threshold:
-                                                lower_tf_volume_confirmed = True
-                                                if self.debug_mode: print(f"DEBUG: LOWER TF LONG volume breakout confirmed.")
-                                           elif self.debug_mode:
-                                                lower_tf_volume_confirmed = False # Explicitly set to False for logging clarity
-                                                print(f"REJECTED: LOWER TF LONG volume breakout filter failed.")
-                                      elif self.debug_mode:
-                                           lower_tf_volume_confirmed = False # Explicitly set to False
-                                           print(f"DEBUG: Not enough recent {self.lower_tf_for_volume} data to calculate average for LOWER TF volume check for LONG.")
-
-                                 elif self.debug_mode:
-                                          lower_tf_volume_confirmed = False # Explicitly set to False
-                                          print(f"DEBUG: No {self.lower_tf_for_volume} bars found within the entry TF breakout bar range ({breakout_bar_start_time} to {current_time}) for LONG.")
-                             elif self.debug_mode:
-                                lower_tf_volume_confirmed = False # Explicitly set to False
-                                print(f"DEBUG: Lower timeframe data ({self.lower_tf_for_volume}) not available for {symbol}. Skipping lower TF volume check for LONG.")
-
-
-                             if lower_tf_volume_confirmed: # This will be True only if lower TF check passed and df_lower_tf_symbol is not None
-                                # Breakout, MTF, Rvol > 1, and Lower TF Volume confirmed, creating trade
-
-                                # Calculate trade size
-                                point_value = 1 # Assuming point value of 1 for stocks
-                                stop_loss_distance = long_entry - long_sl
-                                if stop_loss_distance > 0:
-                                     trade_size = int((self.initial_capital * self.risk_per_trade_percent) / (stop_loss_distance * point_value))
+                                # Recalculate trade parameters based on actual entry price
+                                actual_long_risk = actual_entry_price - long_sl
+                                actual_long_tp = actual_entry_price + (actual_long_risk * self.risk_reward)
+                                point_value = 1
+                                if actual_long_risk > 0:
+                                    trade_size = int((self.initial_capital * self.risk_per_trade_percent) / (actual_long_risk * point_value))
                                 else:
-                                     trade_size = 0
+                                    trade_size = 0
 
                                 if trade_size > 0:
-                                     open_trade_symbol = Trade(symbol, next_bar.name, long_entry, 'LONG', long_sl, long_tp, long_risk, trade_size) # Pass trade_size
-                                     if self.debug_mode:
-                                         print(f"DEBUG: Opened LONG trade on {symbol} at {next_bar.name} Entry: {long_entry:.2f}, SL: {long_sl:.2f}, TP: {long_tp:.2f}, Size: {trade_size}.")
+                                    open_trade_symbol = Trade(symbol, entry_bar.name, actual_entry_price, 'LONG', long_sl, actual_long_tp, actual_long_risk, trade_size)
+                                    if self.debug_mode:
+                                        print(f"DEBUG: Opened LONG trade on {symbol} at {entry_bar.name} Entry: {actual_entry_price:.2f}, SL: {long_sl:.2f}, TP: {actual_long_tp:.2f}, Size: {trade_size}.")
                                 elif self.debug_mode:
-                                     print(f"REJECTED: Calculated trade size is zero or negative ({trade_size}) for LONG at {next_bar.name} on {symbol}. Stop loss distance: {stop_loss_distance:.2f}")
+                                    print(f"REJECTED: Calculated trade size is zero or negative ({trade_size}) for LONG at {entry_bar.name} on {symbol}. Risk: {actual_long_risk:.2f}")
 
-                                 # If lower_tf_volume_confirmed is False and df_lower_tf_symbol is not None, rejection logged inside the check.
-
-
-                             elif self.debug_mode:
-                                  print(f"REJECTED: Rvol filter failed (Rvol <= 1.0) for LONG at {next_bar.name} on {symbol}.")
-                         elif self.debug_mode:
-                            print(f"DEBUG: Not enough lookback data ({len(lookback_slice)} bars) or zero average volume for Rvol check for LONG at {next_bar.name} on {symbol}.")
-
+                        elif self.debug_mode:
+                            print(f"REJECTED: Rvol filter failed for LONG at {trigger_bar.name} on {symbol}.")
                     elif self.debug_mode:
-                        # MTF alignment already logged as rejected inside check_mtf_trend
-                        pass # No need to duplicate rejection message here
+                        print(f"DEBUG: Not enough lookback data for Rvol check for LONG at {trigger_bar.name} on {symbol}.")
 
             # --- SHORT BREAKOUT CHECK ---
             if short_breakout_condition:
                 if self.debug_mode:
-                    print(f"DEBUG: Short breakout condition met at {next_bar.name} on {symbol}.")
-                # Check for MTF Squeeze
+                    print(f"DEBUG: Short breakout condition met on trigger bar {trigger_bar.name} on {symbol}.")
+
                 mtf_squeeze_found = self.check_mtf_squeeze(symbol, current_time)
 
                 if mtf_squeeze_found:
-                     # Check Volume Breakout Confirmation on the entry timeframe breakout bar
-                    lookback_slice = df_et.iloc[max(0, i - self.rvol_lookback_bars):i] # Bars BEFORE the breakout bar
+                    lookback_slice = df_et.iloc[max(0, i - self.rvol_lookback_bars):i]
                     if not lookback_slice.empty and lookback_slice['Volume'].mean() > 0:
-                         average_volume = lookback_slice['Volume'].mean()
-                         breakout_volume = next_bar['Volume']
-                         rvol = breakout_volume / average_volume
+                        average_volume = lookback_slice['Volume'].mean()
+                        breakout_volume = trigger_bar['Volume']
+                        rvol = breakout_volume / average_volume
 
-                         if self.debug_mode:
-                              print(f"DEBUG: Checking Rvol for SHORT breakout: Breakout Vol: {breakout_volume:.0f}, Avg Lookback Vol ({self.rvol_lookback_bars} bars): {average_volume:.0f}, Rvol: {rvol:.2f}, Condition: > {self.rvol_condition_value}")
+                        if self.debug_mode:
+                            print(f"DEBUG: Checking Rvol for SHORT breakout: Breakout Vol: {breakout_volume:.0f}, Avg Lookback Vol ({self.rvol_lookback_bars} bars): {average_volume:.0f}, Rvol: {rvol:.2f}, Condition: > {self.rvol_condition_value}")
 
-                         if rvol > self.rvol_condition_value: # Rvol condition
-                             # Rvol condition met. Now check Lower Timeframe Volume.
+                        if rvol > self.rvol_condition_value:
+                            lower_tf_volume_confirmed = self._check_lower_tf_volume_spike(symbol, df_lower_tf_symbol, trigger_bar.name, 'SHORT')
 
-                             lower_tf_volume_confirmed = True # Assume true initially
-                             if df_lower_tf_symbol is not None:
-                                 # Get lower timeframe bars within the entry timeframe breakout bar's time range
-                                 entry_tf_freq = pd.to_timedelta(self.entry_tf)
-                                 breakout_bar_start_time = current_time - entry_tf_freq
+                            if lower_tf_volume_confirmed:
+                                actual_entry_price = entry_bar['Open']
 
-                                 lower_tf_bars_in_breakout_bar = df_lower_tf_symbol.loc[
-                                     (df_lower_tf_symbol.index >= breakout_bar_start_time) & (df_lower_tf_symbol.index <= current_time)
-                                 ]
+                                if actual_entry_price >= short_sl:
+                                    if self.debug_mode:
+                                        print(f"REJECTED: SHORT trade invalidated due to gap up. Entry: {actual_entry_price:.2f}, SL: {short_sl:.2f} on {symbol} at {entry_bar.name}")
+                                    continue
 
-                                 if not lower_tf_bars_in_breakout_bar.empty:
-                                      # Check for a volume spike on the lower timeframe bars
-                                      # For simplicity, check if max lower TF volume is > 1.5 * average recent lower TF volume
-                                      recent_lower_tf_bars = df_lower_tf_symbol.loc[df_lower_tf_symbol.index < breakout_bar_start_time]
-                                      window_size_lower_tf = int(entry_tf_freq.total_seconds()/60) * 5
-                                      recent_lower_tf_bars = recent_lower_tf_bars.tail(window_size_lower_tf)
-
-                                      if not recent_lower_tf_bars.empty:
-                                           avg_recent_lower_tf_volume = recent_lower_tf_bars['Volume'].mean()
-                                           max_lower_tf_volume_in_breakout_bar = lower_tf_bars_in_breakout_bar['Volume'].max()
-                                           lower_tf_volume_spike_threshold = 1.5 * avg_recent_lower_tf_volume
-
-                                           if self.debug_mode:
-                                                print(f"DEBUG: Checking LOWER TF ({self.lower_tf_for_volume}) SHORT volume breakout: Max Vol: {max_lower_tf_volume_in_breakout_bar:.0f}, Avg Recent Vol: {avg_recent_lower_tf_volume:.0f}, Threshold: {lower_tf_volume_spike_threshold:.0f}")
-
-                                           if max_lower_tf_volume_in_breakout_bar > lower_tf_volume_spike_threshold:
-                                                lower_tf_volume_confirmed = True
-                                                if self.debug_mode: print(f"DEBUG: LOWER TF SHORT volume breakout confirmed.")
-                                           elif self.debug_mode:
-                                                lower_tf_volume_confirmed = False # Explicitly set to False for logging clarity
-                                                print(f"REJECTED: LOWER TF SHORT volume breakout filter failed.")
-                                      elif self.debug_mode:
-                                           lower_tf_volume_confirmed = False # Explicitly set to False
-                                           print(f"DEBUG: Not enough recent {self.lower_tf_for_volume} data to calculate average for LOWER TF volume check for SHORT.")
-                                 elif self.debug_mode:
-                                      lower_tf_volume_confirmed = False # Explicitly set to False
-                                      print(f"DEBUG: No {self.lower_tf_for_volume} bars found within the entry TF breakout bar range ({breakout_bar_start_time} to {current_time}) for SHORT.")
-                                 elif self.debug_mode:
-                                      lower_tf_volume_confirmed = False # Explicitly set to False
-                                      print(f"DEBUG: Lower timeframe data ({self.lower_tf_for_volume}) not available for {symbol}. Skipping lower TF volume check for SHORT.")
-
-
-                             if lower_tf_volume_confirmed: # This will be True only if lower TF check passed and df_lower_tf_symbol is not None
-                                # Breakout, MTF, Rvol > 1, and Lower TF Volume confirmed, creating trade
-
-                                # Calculate trade size
-                                point_value = 1 # Assuming point value of 1 for stocks
-                                stop_loss_distance = short_sl - short_entry
-                                if stop_loss_distance > 0:
-                                     trade_size = int((self.initial_capital * self.risk_per_trade_percent) / (stop_loss_distance * point_value))
+                                actual_short_risk = short_sl - actual_entry_price
+                                actual_short_tp = actual_entry_price - (actual_short_risk * self.risk_reward)
+                                point_value = 1
+                                if actual_short_risk > 0:
+                                    trade_size = int((self.initial_capital * self.risk_per_trade_percent) / (actual_short_risk * point_value))
                                 else:
-                                     trade_size = 0
+                                    trade_size = 0
 
                                 if trade_size > 0:
-                                     open_trade_symbol = Trade(symbol, next_bar.name, short_entry, 'SHORT', short_sl, short_tp, short_risk, trade_size) # Pass trade_size
-                                     if self.debug_mode:
-                                         print(f"DEBUG: Opened SHORT trade on {symbol} at {next_bar.name} Entry: {short_entry:.2f}, SL: {short_sl:.2f}, TP: {short_tp:.2f}, Size: {trade_size}.")
+                                    open_trade_symbol = Trade(symbol, entry_bar.name, actual_entry_price, 'SHORT', short_sl, actual_short_tp, actual_short_risk, trade_size)
+                                    if self.debug_mode:
+                                        print(f"DEBUG: Opened SHORT trade on {symbol} at {entry_bar.name} Entry: {actual_entry_price:.2f}, SL: {short_sl:.2f}, TP: {actual_short_tp:.2f}, Size: {trade_size}.")
                                 elif self.debug_mode:
-                                     print(f"REJECTED: Calculated trade size is zero or negative ({trade_size}) for SHORT at {next_bar.name} on {symbol}. Stop loss distance: {stop_loss_distance:.2f}")
+                                    print(f"REJECTED: Calculated trade size is zero or negative ({trade_size}) for SHORT at {entry_bar.name} on {symbol}. Risk: {actual_short_risk:.2f}")
 
-                             # If lower_tf_volume_confirmed is False and df_lower_tf_symbol is not None, rejection logged inside the check.
-
-
-                         elif self.debug_mode:
-                              print(f"REJECTED: Rvol filter failed (Rvol <= 1.0) for SHORT at {next_bar.name} on {symbol}.")
+                        elif self.debug_mode:
+                            print(f"REJECTED: Rvol filter failed for SHORT at {trigger_bar.name} on {symbol}.")
                     elif self.debug_mode:
-                        print(f"DEBUG: Not enough lookback data ({len(lookback_slice)} bars) or zero average volume for Rvol check for SHORT at {next_bar.name} on {symbol}.")
-                elif self.debug_mode:
-                    # MTF alignment already logged as rejected inside check_mtf_trend
-                    pass # No need to duplicate rejection message here
+                        print(f"DEBUG: Not enough lookback data for Rvol check for SHORT at {trigger_bar.name} on {symbol}.")
 
         # Return the list of trades and the final state of the open trade for this symbol
         return trades_symbol, open_trade_symbol
+
+    def _check_lower_tf_volume_spike(self, symbol, df_lower_tf, trigger_bar_time, direction):
+        """Checks for a volume spike on the lower timeframe within the trigger bar's duration."""
+        if df_lower_tf is None:
+            if self.debug_mode:
+                print(f"DEBUG: Lower timeframe data ({self.lower_tf_for_volume}) not available for {symbol}. Skipping lower TF volume check for {direction}.")
+            return True # If no lower TF data, we can't fail this check.
+
+        try:
+            entry_tf_freq = pd.to_timedelta(self.entry_tf)
+            breakout_bar_start_time = trigger_bar_time - entry_tf_freq
+
+            # Select lower TF bars that fall exactly within the trigger bar's time range
+            lower_tf_bars_in_breakout_bar = df_lower_tf.loc[
+                (df_lower_tf.index >= breakout_bar_start_time) & (df_lower_tf.index <= trigger_bar_time)
+            ]
+
+            if lower_tf_bars_in_breakout_bar.empty:
+                if self.debug_mode:
+                    print(f"DEBUG: No {self.lower_tf_for_volume} bars found within the entry TF trigger bar range ({breakout_bar_start_time} to {trigger_bar_time}) for {direction}.")
+                return False
+
+            # Calculate average recent lower TF volume *before* the trigger bar started
+            recent_lower_tf_bars = df_lower_tf.loc[df_lower_tf.index < breakout_bar_start_time]
+            lower_tf_freq_td = pd.to_timedelta(self.lower_tf_for_volume)
+            window_size_lower_tf = int(entry_tf_freq.total_seconds() / lower_tf_freq_td.total_seconds()) * 5
+            recent_lower_tf_bars = recent_lower_tf_bars.tail(window_size_lower_tf)
+
+            if recent_lower_tf_bars.empty or recent_lower_tf_bars['Volume'].mean() == 0:
+                if self.debug_mode:
+                    print(f"DEBUG: Not enough recent {self.lower_tf_for_volume} data to calculate average for LOWER TF volume check for {direction}.")
+                return False
+
+            avg_recent_lower_tf_volume = recent_lower_tf_bars['Volume'].mean()
+            max_lower_tf_volume_in_breakout_bar = lower_tf_bars_in_breakout_bar['Volume'].max()
+            lower_tf_volume_spike_threshold = 1.5 * avg_recent_lower_tf_volume
+
+            if self.debug_mode:
+                print(f"DEBUG: Checking LOWER TF ({self.lower_tf_for_volume}) {direction} volume breakout: Max Vol: {max_lower_tf_volume_in_breakout_bar:.0f}, Avg Recent Vol: {avg_recent_lower_tf_volume:.0f}, Threshold: {lower_tf_volume_spike_threshold:.0f}")
+
+            if max_lower_tf_volume_in_breakout_bar > lower_tf_volume_spike_threshold:
+                if self.debug_mode: print(f"DEBUG: LOWER TF {direction} volume breakout confirmed.")
+                return True
+            else:
+                if self.debug_mode: print(f"REJECTED: LOWER TF {direction} volume breakout filter failed.")
+                return False
+
+        except Exception as e:
+            if self.debug_mode:
+                print(f"DEBUG: Error during lower TF volume check for {symbol} at {trigger_bar_time} for {direction}: {e}. Skipping check.")
+            return False
 
 
     def _manage_open_trade_single_symbol(self, trade, current_bar, current_time):
