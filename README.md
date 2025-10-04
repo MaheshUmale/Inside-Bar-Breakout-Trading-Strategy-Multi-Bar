@@ -54,3 +54,36 @@ The automated strategy logic is divided into two primary loops:
 2. **Move to Break-Even (BE):** Once the trade has moved in profit by $1R$ (the distance from Entry to Initial SL), immediately move the Stop Loss to the Entry Price (BE).
 
 3. **Trail Stop (ATR):** Once at BE, use the $2 \times ATR(14)$ calculation to dynamically move the Stop Loss, locking in profit as the expansion continues.
+
+## 4. Backtesting, Reporting, and Visualization
+
+The script includes a comprehensive backtesting engine that evaluates the strategy's performance across multiple symbols and generates detailed reports and visualizations.
+
+### A. Backtesting Execution
+
+The backtest is executed by running the `InsideBarBACKTEST.py` script. The script will:
+1.  Load all `_minute.csv` data files from the root directory.
+2.  Resample the data to the required timeframes.
+3.  Execute the backtest logic for each symbol in parallel.
+4.  Generate and save reports and charts.
+
+### B. Reporting Suite
+
+All generated reports and charts are saved in the `REPORTS/` directory. The following reports are generated:
+
+*   **Consolidated Summary Report:** A single file (`consolidated_summary_report.txt`) that provides a high-level overview of the strategy's performance across all tested symbols.
+*   **Per-Symbol Summary Reports:** Individual summary reports for each symbol (e.g., `360ONE_summary_report.txt`), detailing performance metrics for that specific symbol.
+*   **Detailed Trade Report:** A comprehensive log of all trades executed during the backtest (`detailed_trade_report.txt`).
+
+### C. Trade Visualization
+
+To provide a visual representation of the strategy's performance, the script generates candlestick charts for each symbol with trades overlaid.
+
+*   **Time-Based Grouping:** Trades are grouped into approximately 2-month intervals to ensure charts are clear and readable.
+*   **Trade Markers:**
+    *   **Entry:** Long entries are marked with a green upward-pointing triangle (`^`), and short entries are marked with a red downward-pointing triangle (`v`).
+    *   **Exit:** Trade exits are marked with a blue 'x'.
+    *   **Stop Loss (SL):** The initial SL is shown as a red line.
+    *   **Take Profit (TP):** The TP is shown as a green line.
+    *   **Trailing SL:** Adjustments to the trailing SL are marked with orange horizontal lines.
+*   **Chart Files:** The charts are saved as PNG files in the `REPORTS/` directory, with one file per time-based group for each symbol (e.g., `360ONE_trades_1.png`).
