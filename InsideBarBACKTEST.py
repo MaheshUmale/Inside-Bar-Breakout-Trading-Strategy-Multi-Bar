@@ -1265,6 +1265,7 @@ class InsideBarBreakoutStrategy:
                                  addplot=addplots,
                                  alines=dict(alines=all_lines, colors=colors, alpha=0.5) if all_lines else None,
                                  figsize=(20, 10),
+                                 volume=True,
                                  savefig=filename,
                                  warn_too_much_data=len(chart_df)+100)
                         print(f"    Saved chart: {filename}")
