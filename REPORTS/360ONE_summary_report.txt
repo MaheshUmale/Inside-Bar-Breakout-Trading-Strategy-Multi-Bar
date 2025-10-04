@@ -1,0 +1,9 @@
+--- Summary for 360ONE ---
+Total Trades: 995
+Winning Trades: 388
+Losing Trades: 607
+Win Rate (%): 38.99%
+Total PnL (Currency): 1045577.25
+Maximum Drawdown (Currency): 540935.13
+Sharpe Ratio (Annualized): 0.71
+Sortino Ratio (Annualized): 0.96

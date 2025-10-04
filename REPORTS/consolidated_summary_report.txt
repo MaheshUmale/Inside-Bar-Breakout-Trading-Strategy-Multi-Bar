@@ -1,0 +1,45 @@
+
+==================================================
+         INSIDE BAR BREAKOUT BACKTEST SUMMARY
+==================================================
+Initial Capital: 1,000,000.00
+Risk per Trade: 2.00%
+Entry Timeframe: 3min
+HTF Confirmation TFs: ['5min', '15min', '30min', '1h', '2h', '1D', '1W']
+Symbols Tested: 2
+Total Trades: 6116
+Winning Trades: 2790
+Losing Trades: 3326
+Win Rate: 45.62%
+Total PnL (Currency): 70530895.73
+Maximum Drawdown (Currency): 272622.31
+Sharpe Ratio (Annualized): 6.08
+Sortino Ratio (Annualized): 15.64
+==================================================
+
+==================================================
+           PER-SYMBOL PERFORMANCE SUMMARY
+==================================================
+
+--- 360ONE ---
+Total Trades: 995
+Winning Trades: 388
+Losing Trades: 607
+Win Rate (%): 38.99%
+Total PnL (Currency): 1045577.25
+Maximum Drawdown (Currency): 540935.13
+Sharpe Ratio (Annualized): 0.71
+Sortino Ratio (Annualized): 0.96
+--------------------
+
+--- 3MINDIA ---
+Total Trades: 5121
+Winning Trades: 2402
+Losing Trades: 2719
+Win Rate (%): 46.90%
+Total PnL (Currency): 69485318.47
+Maximum Drawdown (Currency): 274158.66
+Sharpe Ratio (Annualized): 6.08
+Sortino Ratio (Annualized): 16.46
+--------------------
+==================================================
