@@ -1,9 +1,0 @@
---- Summary for ADANIGREEN ---
-Total Trades: 663
-Winning Trades: 267
-Losing Trades: 396
-Win Rate (%): 40.27%
-Total PnL (Currency): 2321534.73
-Maximum Drawdown (Currency): 463376.87
-Sharpe Ratio (Annualized): 1.08
-Sortino Ratio (Annualized): 1.66

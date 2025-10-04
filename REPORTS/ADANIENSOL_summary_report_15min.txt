@@ -1,9 +1,0 @@
---- Summary for ADANIENSOL ---
-Total Trades: 723
-Winning Trades: 296
-Losing Trades: 427
-Win Rate (%): 40.94%
-Total PnL (Currency): 3309401.07
-Maximum Drawdown (Currency): 262131.85
-Sharpe Ratio (Annualized): 1.20
-Sortino Ratio (Annualized): 1.86

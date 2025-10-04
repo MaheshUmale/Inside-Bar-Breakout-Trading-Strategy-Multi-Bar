@@ -1,9 +1,0 @@
---- Summary for ANANDRATHI ---
-Total Trades: 325
-Winning Trades: 119
-Losing Trades: 206
-Win Rate (%): 36.62%
-Total PnL (Currency): 1007188.62
-Maximum Drawdown (Currency): 271157.96
-Sharpe Ratio (Annualized): 0.88
-Sortino Ratio (Annualized): 1.36

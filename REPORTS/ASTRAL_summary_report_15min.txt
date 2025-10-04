@@ -1,9 +1,0 @@
---- Summary for ASTRAL ---
-Total Trades: 897
-Winning Trades: 346
-Losing Trades: 551
-Win Rate (%): 38.57%
-Total PnL (Currency): 1755805.99
-Maximum Drawdown (Currency): 632967.10
-Sharpe Ratio (Annualized): 0.65
-Sortino Ratio (Annualized): 0.92

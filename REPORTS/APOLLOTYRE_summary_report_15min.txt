@@ -1,9 +1,0 @@
---- Summary for APOLLOTYRE ---
-Total Trades: 289
-Winning Trades: 119
-Losing Trades: 170
-Win Rate (%): 41.18%
-Total PnL (Currency): 277367.97
-Maximum Drawdown (Currency): 168839.23
-Sharpe Ratio (Annualized): 0.34
-Sortino Ratio (Annualized): 0.24

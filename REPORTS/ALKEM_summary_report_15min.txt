@@ -1,9 +1,0 @@
---- Summary for ALKEM ---
-Total Trades: 1193
-Winning Trades: 433
-Losing Trades: 760
-Win Rate (%): 36.30%
-Total PnL (Currency): 1858631.83
-Maximum Drawdown (Currency): 873192.52
-Sharpe Ratio (Annualized): 0.52
-Sortino Ratio (Annualized): 0.92

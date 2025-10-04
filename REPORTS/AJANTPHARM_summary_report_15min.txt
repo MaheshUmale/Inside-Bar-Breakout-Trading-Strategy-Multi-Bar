@@ -1,9 +1,0 @@
---- Summary for AJANTPHARM ---
-Total Trades: 1235
-Winning Trades: 518
-Losing Trades: 717
-Win Rate (%): 41.94%
-Total PnL (Currency): 4189915.42
-Maximum Drawdown (Currency): 336793.13
-Sharpe Ratio (Annualized): 1.21
-Sortino Ratio (Annualized): 2.13

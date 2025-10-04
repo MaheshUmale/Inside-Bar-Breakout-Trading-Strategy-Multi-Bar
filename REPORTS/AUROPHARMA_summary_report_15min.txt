@@ -1,9 +1,0 @@
---- Summary for AUROPHARMA ---
-Total Trades: 1111
-Winning Trades: 456
-Losing Trades: 655
-Win Rate (%): 41.04%
-Total PnL (Currency): 2794837.43
-Maximum Drawdown (Currency): 202377.66
-Sharpe Ratio (Annualized): 1.04
-Sortino Ratio (Annualized): 1.70

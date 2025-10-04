@@ -1,9 +1,0 @@
---- Summary for APOLLOHOSP ---
-Total Trades: 1429
-Winning Trades: 607
-Losing Trades: 822
-Win Rate (%): 42.48%
-Total PnL (Currency): 7330127.49
-Maximum Drawdown (Currency): 260553.23
-Sharpe Ratio (Annualized): 1.69
-Sortino Ratio (Annualized): 3.77

@@ -1,9 +1,0 @@
---- Summary for ASHOKLEY ---
-Total Trades: 11
-Winning Trades: 8
-Losing Trades: 3
-Win Rate (%): 72.73%
-Total PnL (Currency): 38241.71
-Maximum Drawdown (Currency): 3848.05
-Sharpe Ratio (Annualized): 0.54
-Sortino Ratio (Annualized): 0.14

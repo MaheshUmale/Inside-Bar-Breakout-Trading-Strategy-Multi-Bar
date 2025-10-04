@@ -1,9 +1,0 @@
---- Summary for APTUS ---
-Total Trades: 175
-Winning Trades: 67
-Losing Trades: 108
-Win Rate (%): 38.29%
-Total PnL (Currency): 128075.43
-Maximum Drawdown (Currency): 126027.84
-Sharpe Ratio (Annualized): 0.29
-Sortino Ratio (Annualized): 0.30

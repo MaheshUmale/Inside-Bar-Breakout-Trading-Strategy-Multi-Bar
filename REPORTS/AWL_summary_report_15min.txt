@@ -1,9 +1,0 @@
---- Summary for AWL ---
-Total Trades: 207
-Winning Trades: 94
-Losing Trades: 113
-Win Rate (%): 45.41%
-Total PnL (Currency): 795289.56
-Maximum Drawdown (Currency): 169159.02
-Sharpe Ratio (Annualized): 1.19
-Sortino Ratio (Annualized): 1.44

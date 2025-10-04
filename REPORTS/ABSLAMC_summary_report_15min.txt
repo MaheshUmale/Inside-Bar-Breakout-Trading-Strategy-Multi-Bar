@@ -1,9 +1,0 @@
---- Summary for ABSLAMC ---
-Total Trades: 235
-Winning Trades: 96
-Losing Trades: 139
-Win Rate (%): 40.85%
-Total PnL (Currency): 187473.86
-Maximum Drawdown (Currency): 204502.26
-Sharpe Ratio (Annualized): 0.29
-Sortino Ratio (Annualized): 0.29

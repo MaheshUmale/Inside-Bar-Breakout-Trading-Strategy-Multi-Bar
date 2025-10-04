@@ -1,9 +1,0 @@
---- Summary for ACI ---
-Total Trades: 275
-Winning Trades: 131
-Losing Trades: 144
-Win Rate (%): 47.64%
-Total PnL (Currency): 1300535.43
-Maximum Drawdown (Currency): 120371.82
-Sharpe Ratio (Annualized): 1.80
-Sortino Ratio (Annualized): 3.07

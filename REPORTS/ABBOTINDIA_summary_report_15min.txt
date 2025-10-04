@@ -1,9 +1,0 @@
---- Summary for ABBOTINDIA ---
-Total Trades: 1590
-Winning Trades: 615
-Losing Trades: 975
-Win Rate (%): 38.68%
-Total PnL (Currency): 12409592.87
-Maximum Drawdown (Currency): 458423.94
-Sharpe Ratio (Annualized): 2.17
-Sortino Ratio (Annualized): 5.49

@@ -1,9 +1,0 @@
---- Summary for ANANTRAJ ---
-Total Trades: 175
-Winning Trades: 74
-Losing Trades: 101
-Win Rate (%): 42.29%
-Total PnL (Currency): 272414.88
-Maximum Drawdown (Currency): 181755.56
-Sharpe Ratio (Annualized): 0.40
-Sortino Ratio (Annualized): 0.39

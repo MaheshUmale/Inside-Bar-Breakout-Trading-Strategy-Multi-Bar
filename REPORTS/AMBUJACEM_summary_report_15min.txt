@@ -1,9 +1,0 @@
---- Summary for AMBUJACEM ---
-Total Trades: 313
-Winning Trades: 116
-Losing Trades: 197
-Win Rate (%): 37.06%
-Total PnL (Currency): 136926.31
-Maximum Drawdown (Currency): 199761.75
-Sharpe Ratio (Annualized): 0.13
-Sortino Ratio (Annualized): 0.11

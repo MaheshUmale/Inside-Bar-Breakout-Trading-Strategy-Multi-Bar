@@ -1,9 +1,0 @@
---- Summary for AXISBANK ---
-Total Trades: 860
-Winning Trades: 386
-Losing Trades: 474
-Win Rate (%): 44.88%
-Total PnL (Currency): 2101748.78
-Maximum Drawdown (Currency): 187213.45
-Sharpe Ratio (Annualized): 1.05
-Sortino Ratio (Annualized): 1.42

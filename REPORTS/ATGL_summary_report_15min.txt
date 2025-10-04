@@ -1,9 +1,0 @@
---- Summary for ATGL ---
-Total Trades: 496
-Winning Trades: 198
-Losing Trades: 298
-Win Rate (%): 39.92%
-Total PnL (Currency): 2673682.85
-Maximum Drawdown (Currency): 424925.14
-Sharpe Ratio (Annualized): 1.36
-Sortino Ratio (Annualized): 1.99
