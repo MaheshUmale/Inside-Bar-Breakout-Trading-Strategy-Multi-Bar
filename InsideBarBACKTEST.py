@@ -810,7 +810,7 @@ class InsideBarBreakoutStrategy:
 
          # 3. Trailing Stop Logic (Simplified: Move to BE at 1R, then trail 2*ATR)
          # Calculate the risk distance in price points
-         risk_distance_points = abs(trade.entry_price - trade.initial_risk) # Use initial_risk which is the price difference
+         risk_distance_points = trade.initial_risk # Use initial_risk which is the price difference
 
          if trade.status == 'OPEN':
 
@@ -1038,7 +1038,7 @@ class InsideBarBreakoutStrategy:
             # Ensure close_price is not None before formatting as float
             close_price_formatted = trade.close_price if trade.close_price is not None else 0.0
             # Ensure initial_risk is not None before formatting as float
-            initial_risk_formatted = abs(trade.initial_risk) if trade.initial_risk is not None else 0.0
+            initial_risk_formatted = trade.initial_risk if trade.initial_risk is not None else 0.0
             initial_risk_currency = initial_risk_formatted*trade.size
 
             report_output += trade_format_string.format( # Use the trade format string for trade data
