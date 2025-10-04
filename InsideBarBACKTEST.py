@@ -6,6 +6,11 @@ import concurrent.futures
 import threading
 from typing import List
 import math
+import matplotlib.pyplot as plt
+import pandas as pd
+import mplfinance as mpf
+from pandas.tseries.offsets import DateOffset
+
 
 # Assume calculate_ema and calculate_atr are defined elsewhere
 # Example placeholder functions (replace with your actual implementations):
@@ -36,6 +41,7 @@ class Trade:
         self.status = 'OPEN'
         self.close_time = None
         self.close_price = None
+        self.sl_history = [(entry_time, sl)] # Store SL history as (time, price)
 
     def close(self, price, time):
         self.close_price = price
@@ -788,12 +794,14 @@ class InsideBarBreakoutStrategy:
                  # Ensure SL is not already at or beyond entry price before moving to BE
                  if trade.sl < trade.entry_price:
                      trade.sl = trade.entry_price
+                     trade.sl_history.append((current_time, trade.sl))
                      if self.debug_mode:
                           print(f"DEBUG: Trailing Stop: Moved SL to Break-Even ({trade.sl:.2f}) for {trade.symbol} at {current_time}.")
              elif trade.direction == 'SHORT' and current_bar['Close'] <= trade.entry_price - risk_distance_points:
                  # Ensure SL is not already at or beyond entry price before moving to BE
                  if trade.sl > trade.entry_price:
                      trade.sl = trade.entry_price
+                     trade.sl_history.append((current_time, trade.sl))
                      if self.debug_mode:
                           print(f"DEBUG: Trailing Stop: Moved SL to Break-Even ({trade.sl:.2f}) for {trade.symbol} at {current_time}.")
 
@@ -807,6 +815,7 @@ class InsideBarBreakoutStrategy:
                      # Only trail up, and only if the new SL is above the current SL (which might be BE)
                      if new_sl > trade.sl:
                           trade.sl = new_sl
+                          trade.sl_history.append((current_time, trade.sl))
                           if self.debug_mode:
                                print(f"DEBUG: Trailing Stop: Moved SL up to {trade.sl:.2f} using ATR for {trade.symbol} at {current_time}.")
                  elif trade.direction == 'SHORT':
@@ -814,6 +823,7 @@ class InsideBarBreakoutStrategy:
                      # Only trail down, and only if the new SL is below the current SL (which might be BE)
                      if new_sl < trade.sl:
                           trade.sl = new_sl
+                          trade.sl_history.append((current_time, trade.sl))
                           if self.debug_mode:
                                print(f"DEBUG: Trailing Stop: Moved SL down to {trade.sl:.2f} using ATR for {trade.symbol} at {current_time}.")
 
@@ -1098,8 +1108,8 @@ class InsideBarBreakoutStrategy:
         return report_output
 
 
-    def generate_report(self, save_to_files=False):
-        """Generates consolidated performance reports and optionally saves them to files."""
+    def generate_report(self, save_to_files=False, reports_dir="REPORTS"):
+        """Generates consolidated and per-symbol reports and saves them to files."""
         summary_report = self.generate_summary_report()
         detailed_report = self.generate_detailed_report()
 
@@ -1108,22 +1118,172 @@ class InsideBarBreakoutStrategy:
         print(detailed_report)
 
         if save_to_files:
-            summary_filename = "backtest_summary_report.txt"
-            detailed_filename = "backtest_detailed_report.txt"
-
+            # 1. Save Consolidated Summary Report
+            summary_filename = os.path.join(reports_dir, "consolidated_summary_report.txt")
             with open(summary_filename, "w") as f:
                 f.write(summary_report)
-            print(f"\nSummary report saved to {summary_filename}")
+            print(f"\nConsolidated summary report saved to {summary_filename}")
 
+            # 2. Save Detailed Trade Report
+            detailed_filename = os.path.join(reports_dir, "detailed_trade_report.txt")
             with open(detailed_filename, "w") as f:
                 f.write(detailed_report)
-            print(f"Detailed report saved to {detailed_filename}")
+            print(f"Detailed trade report saved to {detailed_filename}")
+
+            # 3. Save Per-Symbol Summary Reports
+            per_symbol_metrics = self.calculate_per_symbol_metrics()
+            if per_symbol_metrics:
+                for symbol, metrics in per_symbol_metrics.items():
+                    symbol_report_filename = os.path.join(reports_dir, f"{symbol}_summary_report.txt")
+                    with open(symbol_report_filename, "w") as f:
+                        f.write(f"--- Summary for {symbol} ---\n")
+                        f.write(f"Total Trades: {metrics['Total Trades']}\n")
+                        f.write(f"Winning Trades: {metrics['Winning Trades']}\n")
+                        f.write(f"Losing Trades: {metrics['Losing Trades']}\n")
+                        f.write(f"Win Rate (%): {metrics['Win Rate (%)']:.2f}%\n")
+                        f.write(f"Total PnL (Currency): {metrics['Total PnL (Currency)']:.2f}\n")
+                        f.write(f"Maximum Drawdown (Currency): {metrics['Maximum Drawdown (Currency)']:.2f}\n")
+                        f.write(f"Sharpe Ratio (Annualized): {metrics['Sharpe Ratio (Annualized)']:.2f}\n")
+                        f.write(f"Sortino Ratio (Annualized): {metrics['Sortino Ratio (Annualized)']:.2f}\n")
+                    print(f"Summary report for {symbol} saved to {symbol_report_filename}")
+
+    def generate_trade_charts(self, reports_dir="REPORTS"):
+        """
+        Generates candlestick charts for each symbol, grouped by time, with trades plotted.
+        """
+        print("\nGenerating trade charts...")
+        if not self.trades:
+            print("No trades to generate charts for.")
+            return
+
+        # Group trades by symbol
+        trades_by_symbol = {}
+        for trade in self.trades:
+            if trade.symbol not in trades_by_symbol:
+                trades_by_symbol[trade.symbol] = []
+            trades_by_symbol[trade.symbol].append(trade)
+
+        for symbol, trades in trades_by_symbol.items():
+            print(f"  Generating charts for {symbol}...")
+            if symbol not in self.ohlcv_data or self.entry_tf not in self.ohlcv_data[symbol]:
+                print(f"    Skipping {symbol}: OHLCV data not found for entry timeframe {self.entry_tf}.")
+                continue
+
+            df_symbol = self.ohlcv_data[symbol][self.entry_tf]
+
+            # Sort trades by entry time
+            trades.sort(key=lambda t: t.entry_time)
+
+            if not trades:
+                continue
+
+            # Group trades into ~2-month intervals
+            start_date = trades[0].entry_time.date()
+            end_date = trades[-1].close_time.date() if trades[-1].close_time else pd.to_datetime('today').date()
+
+            current_start = start_date
+            chart_num = 1
+            while current_start <= end_date:
+                # Define the time window for the chart (approx. 2 months)
+                current_end = pd.to_datetime(current_start) + DateOffset(months=2, days=5)
+
+                # Find trades within this window
+                trades_in_window = [t for t in trades if pd.to_datetime(current_start) <= t.entry_time < current_end]
+
+                if trades_in_window:
+                    # Determine the chart's actual start and end time to include full context
+                    chart_start_time = trades_in_window[0].entry_time - pd.Timedelta(hours=1)
+
+                    valid_close_times = [t.close_time for t in trades_in_window if t.close_time]
+                    if not valid_close_times:
+                        current_start = pd.to_datetime(current_end).date()
+                        continue
+
+                    chart_end_time = max(valid_close_times) + pd.Timedelta(hours=1)
+
+                    # Filter OHLCV data for the chart's time range
+                    chart_df = df_symbol[(df_symbol.index >= chart_start_time) & (df_symbol.index <= chart_end_time)]
+
+                    if chart_df.empty:
+                        current_start = pd.to_datetime(current_end).date()
+                        continue
+
+                    # Prepare data for plotting
+                    addplots = []
+                    sl_lines = []
+                    tp_lines = []
+
+                    buy_marker_series = pd.Series(np.nan, index=chart_df.index)
+                    sell_marker_series = pd.Series(np.nan, index=chart_df.index)
+                    exit_marker_series = pd.Series(np.nan, index=chart_df.index)
+                    trailing_sl_series = pd.Series(np.nan, index=chart_df.index)
+
+                    for trade in trades_in_window:
+                        # --- Markers ---
+                        if trade.entry_time in chart_df.index:
+                            if trade.direction == 'LONG':
+                                buy_marker_series[trade.entry_time] = trade.entry_price * 0.99
+                            else: # SHORT
+                                sell_marker_series[trade.entry_time] = trade.entry_price * 1.01
+
+                        if trade.close_time and trade.close_price and trade.close_time in chart_df.index:
+                            exit_marker_series[trade.close_time] = trade.close_price
+
+                        # --- SL/TP Lines ---
+                        if trade.close_time:
+                            # Initial SL and TP lines
+                            sl_lines.append([(trade.entry_time, trade.sl_history[0][1]), (trade.close_time, trade.sl_history[0][1])])
+                            tp_lines.append([(trade.entry_time, trade.tp), (trade.close_time, trade.tp)])
+
+                        # Trailing SL markers
+                        if len(trade.sl_history) > 1:
+                            for time, sl_price in trade.sl_history[1:]:
+                                if time in trailing_sl_series.index:
+                                    trailing_sl_series[time] = sl_price
+
+                    if not buy_marker_series.dropna().empty:
+                        addplots.append(mpf.make_addplot(buy_marker_series, type='scatter', marker='^', color='g', markersize=100))
+                    if not sell_marker_series.dropna().empty:
+                        addplots.append(mpf.make_addplot(sell_marker_series, type='scatter', marker='v', color='r', markersize=100))
+                    if not exit_marker_series.dropna().empty:
+                        addplots.append(mpf.make_addplot(exit_marker_series, type='scatter', marker='x', color='b', markersize=100))
+                    if not trailing_sl_series.dropna().empty:
+                        addplots.append(mpf.make_addplot(trailing_sl_series, type='scatter', marker='_', color='orange', markersize=150))
+
+                    # Combine all lines for plotting
+                    all_lines = sl_lines + tp_lines
+                    colors = ['r']*len(sl_lines) + ['g']*len(tp_lines)
+
+                    # Generate and save the chart
+                    filename = os.path.join(reports_dir, f"{symbol}_trades_{chart_num}.png")
+                    try:
+                        mpf.plot(chart_df,
+                                 type='candle',
+                                 style='yahoo',
+                                 title=f"Trades for {symbol} ({pd.to_datetime(current_start).strftime('%Y-%m-%d')} to {current_end.strftime('%Y-%m-%d')})",
+                                 ylabel='Price',
+                                 addplot=addplots,
+                                 alines=dict(alines=all_lines, colors=colors, alpha=0.5) if all_lines else None,
+                                 figsize=(20, 10),
+                                 savefig=filename,
+                                 warn_too_much_data=len(chart_df)+100)
+                        print(f"    Saved chart: {filename}")
+                        chart_num += 1
+                    except Exception as e:
+                        print(f"Could not plot chart for {symbol} {chart_num}: {e}")
+
+
+                current_start = pd.to_datetime(current_end).date()
 
 
 # --- EXECUTION ---
 
-DATA_FOLDER = "/content"
-DATA_FOLDER = "D:\\py_code_workspace\\NSE _STOCK _DATA"
+DATA_FOLDER = "." # Use current directory for data files
+REPORTS_DIR = "REPORTS" # Define reports directory
+
+# Create reports directory if it doesn't exist
+if not os.path.exists(REPORTS_DIR):
+    os.makedirs(REPORTS_DIR)
 
 # Initialize the strategy and backtester
 backtester = InsideBarBreakoutStrategy(
@@ -1142,43 +1302,9 @@ backtester.load_all_market_data()
 backtester.run_backtest()
 
 # Generate the performance summary and detailed report and save them to files
-backtester.generate_report(save_to_files=True)
+backtester.generate_report(save_to_files=True, reports_dir=REPORTS_DIR)
 
-
-
-import matplotlib.pyplot as plt
-import pandas as pd
-
-# Ensure trades are sorted by time for correct cumulative PnL calculation
-sorted_trades = sorted(backtester.trades, key=lambda t: t.close_time if t.close_time else pd.to_datetime('9999-12-31'))
-
-# Group trades by symbol
-trades_by_symbol = {}
-for trade in sorted_trades:
-    if trade.symbol not in trades_by_symbol:
-        trades_by_symbol[trade.symbol] = []
-    trades_by_symbol[trade.symbol].append(trade)
-
-# Plot equity curve for each symbol
-for symbol, trades in trades_by_symbol.items():
-    equity_curve_symbol = pd.DataFrame({
-        'time': [trade.close_time for trade in trades],
-        'pnl': [trade.pnl for trade in trades]
-    })
-    # Add initial capital to the first trade's PnL to start the curve from the initial capital
-    if not equity_curve_symbol.empty:
-        equity_curve_symbol['cumulative_pnl'] = equity_curve_symbol['pnl'].cumsum() + backtester.initial_capital
-
-
-        plt.figure(figsize=(12, 6))
-        plt.plot(equity_curve_symbol['time'], equity_curve_symbol['cumulative_pnl'])
-        plt.title(f'Equity Curve for {symbol}')
-        plt.xlabel('Time')
-        plt.ylabel('Cumulative PnL')
-        plt.grid(True)
-        plt.show()
-
-    else:
-        print(f"No closed trades to plot equity curve for {symbol}.")
+# Generate trade charts
+backtester.generate_trade_charts(reports_dir=REPORTS_DIR)
         
         

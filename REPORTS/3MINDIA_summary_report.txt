@@ -1,0 +1,9 @@
+--- Summary for 3MINDIA ---
+Total Trades: 5121
+Winning Trades: 2402
+Losing Trades: 2719
+Win Rate (%): 46.90%
+Total PnL (Currency): 69485318.47
+Maximum Drawdown (Currency): 274158.66
+Sharpe Ratio (Annualized): 6.08
+Sortino Ratio (Annualized): 16.46
