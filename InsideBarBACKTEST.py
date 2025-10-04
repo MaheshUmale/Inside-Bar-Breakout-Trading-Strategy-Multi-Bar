@@ -81,7 +81,7 @@ class InsideBarBreakoutStrategy:
         self.max_workers = max_workers # Number of worker threads for multi-threading
         self.initial_capital = initial_capital # Add initial capital
         self.risk_per_trade_percent = risk_per_trade_percent # Add risk per trade percentage
-
+        self.batch_size = 5
 
         # Dynamically determine HTFs based on entry_tf
         self.higher_timeframes = self._get_higher_timeframes(entry_timeframe)
@@ -153,10 +153,34 @@ class InsideBarBreakoutStrategy:
 
 
     def load_all_market_data(self):
-        """Finds all CSV files and loads/resamples data for all symbols."""
+        """
+        Finds all CSV files, dynamically determines the number of worker threads based on
+        file count and size, and then loads/resamples data for all symbols in parallel.
+        """
         print(f"Loading data from: {self.data_path}")
 
         csv_files = glob.glob(os.path.join(self.data_path, '3*_minute.csv'))
+
+        if not csv_files:
+            print("No CSV files found to process.")
+            return
+
+        # Dynamically determine the optimal number of worker threads based on file size and count
+        num_files = len(csv_files)
+        # Check if any file is larger than 50 MB
+        large_file_found = any(os.path.getsize(file) > 50 * 1024 * 1024 for file in csv_files)
+
+        if large_file_found:
+            self.max_workers = 3
+            print(f"INFO: Large file (>50MB) detected. Capping max workers to {self.max_workers} to manage memory.")
+        elif num_files > 5:
+            self.max_workers = 5
+            print(f"INFO: More than 5 files ({num_files}) detected. Capping max workers to {self.max_workers}.")
+        else:
+            # If 5 or fewer files, use one thread per file (but at least 1 to avoid zero)
+            self.max_workers = num_files if num_files > 0 else 1
+            print(f"INFO: {num_files} files detected. Setting max workers to {self.max_workers}.")
+
 
         # Use ThreadPoolExecutor for faster data loading and resampling
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
